@@ -143,6 +143,8 @@ impl Component for EditTreeViewer {
                     && y >= 0
                     && y < canvas.size().height as isize
                 {
+                    // False positive, see https://github.com/rust-lang/rust-clippy/issues/7750
+                    #[allow(clippy::manual_str_repeat)]
                     canvas.draw_str(
                         start_x as usize,
                         y as usize,
