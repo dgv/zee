@@ -35,6 +35,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug)]
+#[allow(clippy::enum_variant_names)]
 pub enum Message {
     ChangeTheme,
     ClosePane,
