@@ -1,10 +1,12 @@
+pub mod buffer;
 mod windows;
+
+pub use self::buffer::{BufferId, ModifiedStatus};
 
 use git2::Repository;
 use ropey::Rope;
 use std::{
     borrow::Cow,
-    collections::hash_map::HashMap,
     fmt::Display,
     fs::File,
     io::{self, BufReader},
@@ -13,14 +15,14 @@ use std::{
     sync::Arc,
 };
 use zi::{
-    BindingMatch, BindingTransition, Callback, Component, ComponentExt, ComponentLink, FlexBasis,
+    BindingMatch, BindingTransition, Component, ComponentExt, ComponentLink, FlexBasis,
     FlexDirection, Item, Key, Layout, Rect, ShouldRender,
 };
 
 use crate::{
     clipboard::Clipboard,
     components::{
-        buffer::{Buffer, Properties as BufferProperties, RepositoryRc},
+        buffer::{Buffer as BufferView, Properties as BufferViewProperties},
         prompt::{
             buffers::BufferEntry, picker::FileSource, Action as PromptAction, Prompt,
             Properties as PromptProperties, PROMPT_INACTIVE_HEIGHT,
@@ -29,14 +31,16 @@ use crate::{
         theme::{Theme, THEMES},
     },
     error::Result,
-    mode::{self, Mode},
     settings::Settings,
     task::TaskPool,
 };
 
-use self::windows::{CycleFocus, Window, WindowTree};
+use self::{
+    buffer::{BufferCursor, Buffers, BuffersMessage, CursorId, RepositoryRc},
+    windows::{CycleFocus, Window, WindowTree},
+};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum Message {
     ChangeTheme,
     ClosePane,
@@ -50,9 +54,16 @@ pub enum Message {
     OpenFilePicker(FileSource),
     OpenFile(PathBuf),
     SelectBuffer(BufferId),
+    Buffer(BuffersMessage),
     Log(Option<String>),
     Cancel,
     Quit,
+}
+
+impl From<BuffersMessage> for Message {
+    fn from(message: BuffersMessage) -> Message {
+        Message::Buffer(message)
+    }
 }
 
 pub struct Context {
@@ -61,6 +72,21 @@ pub struct Context {
     pub settings: Settings,
     pub task_pool: TaskPool,
     pub clipboard: Arc<dyn Clipboard>,
+}
+
+#[derive(Clone)]
+pub struct Logger {
+    link: ComponentLink<Editor>,
+}
+
+impl Logger {
+    fn new(link: ComponentLink<Editor>) -> Self {
+        Self { link }
+    }
+
+    pub fn info(&self, message: String) {
+        self.link.send(Message::Log(Some(message)));
+    }
 }
 
 pub struct Editor {
@@ -72,53 +98,55 @@ pub struct Editor {
     prompt_action: PromptAction,
     prompt_height: usize,
 
-    buffers: HashMap<BufferId, OpenBuffer>,
-    next_buffer_id: usize,
-    windows: WindowTree<BufferId>,
-    log_message: Callback<String>,
-}
-
-pub struct OpenBuffer {
-    mode: &'static Mode,
-    repo: Option<RepositoryRc>,
-    content: Rope,
-    file_path: Option<PathBuf>,
+    buffers: Buffers,
+    windows: WindowTree<BufferViewId>,
+    logger: Logger,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct BufferId(usize);
+struct BufferViewId {
+    buffer_id: BufferId,
+    cursor_id: CursorId,
+}
 
-impl Display for BufferId {
+impl BufferViewId {
+    fn new(buffer_id: BufferId, cursor_id: CursorId) -> Self {
+        Self {
+            buffer_id,
+            cursor_id,
+        }
+    }
+}
+
+impl Display for BufferViewId {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(formatter, "BufferId({})", self.0)
+        write!(
+            formatter,
+            "BufferViewId(buffer={}, cursor={})",
+            self.buffer_id, self.cursor_id
+        )
     }
 }
 
 impl Editor {
+    #[inline]
+    fn focus_on_buffer(&mut self, buffer_id: BufferId) {
+        if self.windows.is_empty() {
+            self.windows
+                .add(BufferViewId::new(buffer_id, CursorId::default()));
+        } else {
+            self.windows
+                .set_focused(BufferViewId::new(buffer_id, CursorId::default()));
+        }
+    }
+
     fn open_file(&mut self, file_path: PathBuf) -> Result<bool> {
         // Check if the buffer is already open
-        if let Some(buffer_id) = self
-            .buffers
-            .iter()
-            .find(|(_, buffer)| {
-                buffer
-                    .file_path
-                    .as_ref()
-                    .map(|buffer_path| *buffer_path == file_path)
-                    .unwrap_or(false)
-            })
-            .map(|(buffer_id, _)| buffer_id)
-        {
-            if self.windows.is_empty() {
-                self.windows.add(*buffer_id);
-            } else {
-                self.windows.set_focused(*buffer_id);
-            }
+        if let Some(buffer_id) = self.buffers.find_by_path(&file_path) {
+            self.focus_on_buffer(buffer_id);
             return Ok(false);
         }
 
-        let mode = mode::find_by_filename(&file_path);
-        let repo = Repository::discover(&file_path).ok();
         let (is_new_file, text) = if file_path.exists() {
             (
                 false,
@@ -130,18 +158,18 @@ impl Editor {
                 .map(|_| false)
                 .or_else(|error| match error.kind() {
                     io::ErrorKind::NotFound => {
-                        self.log_message("[New file]".into());
+                        self.logger.info("[New file]".into());
                         Ok(true)
                     }
                     io::ErrorKind::PermissionDenied => {
-                        self.log_message(format!(
+                        self.logger.info(format!(
                             "Permission denied while opening {}",
                             file_path.display()
                         ));
                         Err(error)
                     }
                     _ => {
-                        self.log_message(format!(
+                        self.logger.info(format!(
                             "Could not open {} ({})",
                             file_path.display(),
                             error
@@ -151,34 +179,16 @@ impl Editor {
                 })?;
             (is_new_file, Rope::new())
         };
-        // Generate a new buffer id
-        let buffer_id = BufferId(self.next_buffer_id);
-        self.next_buffer_id += 1;
+
+        let repo = Repository::discover(&file_path).ok().map(RepositoryRc::new);
 
         // Store the new buffer
-        self.buffers.insert(
-            buffer_id,
-            OpenBuffer {
-                mode,
-                repo: repo.map(RepositoryRc::new),
-                content: text,
-                file_path: Some(file_path),
-            },
-        );
+        let buffer_id = self.buffers.add(text, Some(file_path), repo);
 
-        // Create a new window for the buffer
-        if self.windows.is_empty() {
-            self.windows.add(buffer_id);
-        } else {
-            self.windows.set_focused(buffer_id);
-        }
+        // Focus on the new buffer
+        self.focus_on_buffer(buffer_id);
 
         Ok(is_new_file)
-    }
-
-    fn log_message(&mut self, message: String) {
-        self.prompt_action = PromptAction::Log { message };
-        self.prompt_height = self.prompt_action.initial_height();
     }
 }
 
@@ -186,35 +196,37 @@ impl Component for Editor {
     type Message = Message;
     type Properties = Rc<Context>;
 
-    fn create(properties: Self::Properties, _frame: Rect, link: ComponentLink<Self>) -> Self {
-        for file_path in properties.args_files.iter().cloned() {
+    fn create(context: Rc<Context>, _frame: Rect, link: ComponentLink<Self>) -> Self {
+        for file_path in context.args_files.iter().cloned() {
             link.send(Message::OpenFile(file_path));
         }
-        let log_message = link.callback(|message| Message::Log(Some(message)));
+        let logger = Logger::new(link.clone());
 
         Self {
-            context: properties,
-            link,
+            context: Rc::clone(&context),
+            link: link.clone(),
             themes: &THEMES,
             theme_index: 0,
             prompt_action: PromptAction::None,
             prompt_height: PROMPT_INACTIVE_HEIGHT,
-            buffers: HashMap::new(),
-            next_buffer_id: 0,
+            buffers: Buffers::new(context, link),
             windows: WindowTree::new(),
-            log_message,
+            logger,
         }
     }
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
         match message {
-            Message::Cancel => {
-                self.log_message("Cancel".into());
+            Message::Cancel if self.prompt_action.is_interactive() => {
+                self.prompt_action = PromptAction::Log {
+                    message: "Cancel".into(),
+                };
+                self.prompt_height = self.prompt_action.initial_height();
             }
             Message::ChangeTheme => {
                 self.theme_index = (self.theme_index + 1) % self.themes.len();
                 if !self.prompt_action.is_interactive() {
-                    self.log_message(format!(
+                    self.logger.info(format!(
                         "Theme changed to {}",
                         self.themes[self.theme_index].1
                     ))
@@ -250,10 +262,10 @@ impl Component for Editor {
                     entries: self
                         .buffers
                         .iter()
-                        .map(|(id, buffer)| {
+                        .map(|buffer| {
                             BufferEntry::new(
-                                *id,
-                                buffer.file_path.clone(),
+                                buffer.id(),
+                                buffer.file_path().cloned(),
                                 false,
                                 buffer.content.len_bytes(),
                                 buffer.mode,
@@ -268,11 +280,7 @@ impl Component for Editor {
             Message::SelectBuffer(buffer_id) => {
                 self.prompt_action = PromptAction::None;
                 self.prompt_height = self.prompt_action.initial_height();
-                if self.windows.is_empty() {
-                    self.windows.add(buffer_id);
-                } else {
-                    self.windows.set_focused(buffer_id);
-                }
+                self.focus_on_buffer(buffer_id);
             }
             Message::ChangePromptHeight(height) => {
                 self.prompt_height = height;
@@ -280,8 +288,15 @@ impl Component for Editor {
             Message::FocusNextComponent => self.windows.cycle_focus(CycleFocus::Next),
             Message::FocusPreviousComponent => self.windows.cycle_focus(CycleFocus::Previous),
             Message::SplitWindow(direction) if !self.buffers.is_empty() => {
-                if let Some(buffer_id) = self.windows.get_focused() {
-                    self.windows.insert_at_focused(buffer_id, direction);
+                if let Some(view_id) = self.windows.get_focused() {
+                    let buffer = self.buffers.get_mut(view_id.buffer_id).unwrap();
+                    self.windows.insert_at_focused(
+                        BufferViewId::new(
+                            view_id.buffer_id,
+                            buffer.duplicate_cursor(view_id.cursor_id),
+                        ),
+                        direction,
+                    );
                 }
             }
             Message::FullscreenWindow if !self.buffers.is_empty() => {
@@ -299,12 +314,14 @@ impl Component for Editor {
             Message::Quit => {
                 self.link.exit();
             }
+            Message::Buffer(message) => self.buffers.handle_message(message),
             _ => {}
         }
         ShouldRender::Yes
     }
 
     fn view(&self) -> Layout {
+        log::info!("Rendering");
         let buffers = if self.windows.is_empty() {
             Splash::item_with_key(
                 FlexBasis::Auto,
@@ -315,10 +332,10 @@ impl Component for Editor {
             )
         } else {
             Item::auto(self.windows.layout(&mut |Window { id, focused, index }| {
-                let buffer = self.buffers.get(&id).unwrap();
-                Buffer::with_key(
+                let buffer = self.buffers.get(id.buffer_id).unwrap();
+                BufferView::with_key(
                     format!("{}.{}", index, id).as_str(),
-                    BufferProperties {
+                    BufferViewProperties {
                         context: self.context.clone(),
                         theme: Cow::Borrowed(&self.themes[self.theme_index].0.buffer),
                         focused: focused && !self.prompt_action.is_interactive(),
@@ -326,8 +343,16 @@ impl Component for Editor {
                         mode: buffer.mode,
                         repo: buffer.repo.clone(),
                         content: buffer.content.clone(),
-                        file_path: buffer.file_path.clone(),
-                        log_message: self.log_message.clone(),
+                        file_path: buffer.file_path().cloned(),
+                        logger: self.logger.clone(),
+                        cursor: BufferCursor::new(
+                            id.buffer_id,
+                            id.cursor_id,
+                            buffer.cursor(id.cursor_id).clone(),
+                            self.link.clone(),
+                        ),
+                        parse_tree: buffer.parse_tree().cloned(),
+                        modified_status: buffer.modified_status(),
                     },
                 )
             }))

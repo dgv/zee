@@ -11,11 +11,12 @@ use zi::{
     ShouldRender, Style,
 };
 
+use crate::editor::{BufferId, Context};
+
 use self::{
     buffers::{BufferEntry, BufferPicker, Properties as BufferPickerProperties},
     picker::{FilePicker, FileSource, Properties as FilePickerProperties},
 };
-use crate::editor::{BufferId, Context};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {

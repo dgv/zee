@@ -30,6 +30,44 @@ impl Cursor {
         }
     }
 
+    pub fn reconcile(&mut self, new_text: &Rope, diff: &OpaqueDiff) {
+        let OpaqueDiff {
+            char_index,
+            old_char_length,
+            new_char_length,
+            ..
+        } = *diff;
+
+        let modified_range =
+            CharIndex(char_index)..CharIndex(cmp::max(old_char_length, new_char_length));
+
+        // The edit starts after the end of the cursor, nothing to do
+        if modified_range.start >= self.range.end {
+            return;
+        }
+
+        // The edit ends before the start of the cursor
+        if modified_range.end <= self.range.start {
+            let (start, end) = (self.range.start.0, self.range.end.0);
+            if old_char_length > new_char_length {
+                let length_change = old_char_length - new_char_length;
+                self.range = CharIndex(start.saturating_sub(length_change))
+                    ..CharIndex(end.saturating_sub(length_change));
+            } else {
+                let length_change = new_char_length - old_char_length;
+                self.range = CharIndex(start + length_change)..CharIndex(end + length_change);
+            };
+        }
+
+        // Otherwise, the change overlaps with the cursor
+        let grapheme_start = prev_grapheme_boundary(
+            &new_text.slice(..),
+            CharIndex(cmp::min(self.range.end.0, new_text.len_chars())),
+        );
+        let grapheme_end = next_grapheme_boundary(&new_text.slice(..), grapheme_start);
+        self.range = grapheme_start..grapheme_end
+    }
+
     #[cfg(test)]
     pub fn end_of_buffer(text: &Rope) -> Self {
         Self {
@@ -153,7 +191,14 @@ impl Cursor {
     pub fn insert_char(&mut self, text: &mut Rope, character: char) -> OpaqueDiff {
         text.insert_char(self.range.start.0, character);
         ensure_trailing_newline_with_content(text);
-        OpaqueDiff::new(text.char_to_byte(self.range.start.0), 0, 1)
+        OpaqueDiff::new(
+            text.char_to_byte(self.range.start.0),
+            0,
+            character.len_utf8(),
+            self.range.start.0,
+            0,
+            1,
+        )
     }
 
     pub fn insert_chars(
@@ -162,15 +207,24 @@ impl Cursor {
         characters: impl IntoIterator<Item = char>,
     ) -> OpaqueDiff {
         let mut num_bytes = 0;
+        let mut num_chars = 0;
         characters
             .into_iter()
             .enumerate()
             .for_each(|(offset, character)| {
                 text.insert_char(self.range.start.0 + offset, character);
                 num_bytes += character.len_utf8();
+                num_chars += 1;
             });
         ensure_trailing_newline_with_content(text);
-        OpaqueDiff::new(text.char_to_byte(self.range.start.0), 0, num_bytes)
+        OpaqueDiff::new(
+            text.char_to_byte(self.range.start.0),
+            0,
+            num_bytes,
+            self.range.start.0,
+            0,
+            num_chars,
+        )
     }
 
     pub fn delete(&mut self, text: &mut Rope) -> DeleteOperation {
@@ -180,6 +234,9 @@ impl Cursor {
         let diff = OpaqueDiff::new(
             text.char_to_byte(self.range.start.0),
             text.char_to_byte(self.range.end.0) - text.char_to_byte(self.range.start.0),
+            0,
+            self.range.start.0,
+            self.range.end.0 - self.range.start.0,
             0,
         );
         text.remove(self.range.start.0..self.range.end.0);
@@ -210,6 +267,9 @@ impl Cursor {
             text.char_to_byte(delete_range_start),
             text.char_to_byte(delete_range_end) - text.char_to_byte(delete_range_start),
             0,
+            delete_range_start,
+            delete_range_end - delete_range_start,
+            0,
         );
         text.remove(delete_range_start..delete_range_end);
 
@@ -230,7 +290,14 @@ impl Cursor {
         // Delete selection
         let selection = self.selection();
         let deleted = text.slice(selection.start.0..selection.end.0).into();
-        let diff = OpaqueDiff::new(selection.start.0, selection.end.0 - selection.start.0, 0);
+        let diff = OpaqueDiff::new(
+            text.char_to_byte(selection.start.0),
+            text.char_to_byte(selection.end.0) - text.char_to_byte(selection.start.0),
+            0,
+            selection.start.0,
+            selection.end.0 - selection.start.0,
+            0,
+        );
         text.remove(selection.start.0..selection.end.0);
 
         // Update cursor position
@@ -320,6 +387,10 @@ impl Cursor {
         }
     }
 }
+
+// fn opaque_diff(text: &Rope) -> OpaqueDiff{
+
+// }
 
 pub struct DeleteOperation {
     pub diff: OpaqueDiff,
@@ -501,6 +572,16 @@ mod tests {
         let text = Rope::from(MULTI_CHAR_EMOJI);
         let grapheme_end = next_grapheme_boundary(&text.slice(..), CharIndex(0)).0;
         assert_eq!(text.len_chars(), grapheme_end);
+    }
+
+    #[test]
+    fn sync_with_empty() {
+        let current_text = Rope::from("Buy a milk goat\nAt the market\n");
+        let new_text = Rope::from("");
+        let mut cursor = Cursor::new();
+        cursor.move_right_n(&current_text, 4);
+        cursor.sync(&current_text, &new_text);
+        assert_eq!(Cursor::new(), cursor);
     }
 
     // #[test]
