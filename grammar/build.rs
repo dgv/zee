@@ -77,6 +77,7 @@ fn main() {
     compile_tree_sitter_c_lib("tree-sitter-css");
     compile_tree_sitter_c_lib("tree-sitter-javascript");
     compile_tree_sitter_c_lib("tree-sitter-rust");
+    compile_tree_sitter_c_lib_no_scanner("tree-sitter-go");
     compile_tree_sitter_c_lib_no_scanner("tree-sitter-c");
     compile_tree_sitter_c_lib_no_scanner("tree-sitter-json");
     compile_tree_sitter_cpp_lib("tree-sitter-bash");

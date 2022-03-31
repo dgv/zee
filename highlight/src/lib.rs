@@ -264,6 +264,7 @@ lazy_static! {
     pub static ref C_RULES: HighlightRules = parse_rules_unwrap(*grammar::C, C_RULES_SOURCE);
     pub static ref CPP_RULES: HighlightRules = parse_rules_unwrap(*grammar::CPP, CPP_RULES_SOURCE);
     pub static ref CSS_RULES: HighlightRules = parse_rules_unwrap(*grammar::CSS, CSS_RULES_SOURCE);
+    pub static ref GO_RULES: HighlightRules = parse_rules_unwrap(*grammar::GO, GO_RULES_SOURCE);
     pub static ref HTML_RULES: HighlightRules =
         parse_rules_unwrap(*grammar::HTML, HTML_RULES_SOURCE);
     pub static ref JAVASCRIPT_RULES: HighlightRules =
@@ -300,6 +301,7 @@ const CSS_RULES_SOURCE: &str = include_str!("../languages/css.json");
 const JAVASCRIPT_RULES_SOURCE: &str = include_str!("../languages/javascript.json");
 const TYPESCRIPT_RULES_SOURCE: &str = include_str!("../languages/typescript.json");
 const TSX_RULES_SOURCE: &str = include_str!("../languages/tsx.json");
+const GO_RULES_SOURCE: &str = include_str!("../languages/go.json");
 
 #[cfg(test)]
 mod tests {

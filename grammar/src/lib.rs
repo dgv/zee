@@ -5,6 +5,7 @@ pub static BASH: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_bash() });
 pub static C: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_c() });
 pub static CPP: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_cpp() });
 pub static CSS: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_css() });
+pub static GO: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_go() });
 pub static HTML: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_html() });
 pub static JAVASCRIPT: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_javascript() });
 pub static JSON: Lazy<Language> = Lazy::new(|| unsafe { tree_sitter_json() });
@@ -19,6 +20,7 @@ extern "C" {
     fn tree_sitter_c() -> Language;
     fn tree_sitter_cpp() -> Language;
     fn tree_sitter_css() -> Language;
+    fn tree_sitter_go() -> Language;
     fn tree_sitter_html() -> Language;
     fn tree_sitter_javascript() -> Language;
     fn tree_sitter_json() -> Language;
@@ -39,6 +41,7 @@ mod tests {
         assert!(C.node_kind_count() > 0);
         assert!(CPP.node_kind_count() > 0);
         assert!(CSS.node_kind_count() > 0);
+        assert!(GO.node_kind_count() > 0);
         assert!(HTML.node_kind_count() > 0);
         assert!(JAVASCRIPT.node_kind_count() > 0);
         assert!(JSON.node_kind_count() > 0);

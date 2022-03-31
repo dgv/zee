@@ -4,8 +4,9 @@ use std::{ffi::OsStr, fmt, path::Path, ptr};
 use tree_sitter::Language;
 use zee_grammar as grammar;
 use zee_highlight::{
-    HighlightRules, BASH_RULES, CPP_RULES, CSS_RULES, C_RULES, HTML_RULES, JAVASCRIPT_RULES,
-    JSON_RULES, MARKDOWN_RULES, PYTHON_RULES, RUST_RULES, TSX_RULES, TYPESCRIPT_RULES,
+    HighlightRules, BASH_RULES, CPP_RULES, CSS_RULES, C_RULES, GO_RULES, HTML_RULES,
+    JAVASCRIPT_RULES, JSON_RULES, MARKDOWN_RULES, PYTHON_RULES, RUST_RULES, TSX_RULES,
+    TYPESCRIPT_RULES,
 };
 
 pub struct Mode {
@@ -111,7 +112,7 @@ pub fn find_by_filename(filename: impl AsRef<Path>) -> &'static Mode {
         .unwrap_or(&PLAIN_TEXT_MODE)
 }
 
-static LANGUAGE_MODES: Lazy<[Mode; 13]> = Lazy::new(|| {
+static LANGUAGE_MODES: Lazy<[Mode; 14]> = Lazy::new(|| {
     [
         Mode {
             name: "Shell Script".into(),
@@ -248,6 +249,14 @@ static LANGUAGE_MODES: Lazy<[Mode; 13]> = Lazy::new(|| {
             name: "Dockerfile".into(),
             file: vec![FilenamePattern::name("Dockerfile")],
             parser: None,
+        },
+        Mode {
+            name: "Go".into(),
+            file: vec![FilenamePattern::suffix(".go")],
+            parser: Some(SyntaxParser {
+                language: *grammar::GO,
+                highlights: GO_RULES.clone(),
+            }),
         },
     ]
 });
