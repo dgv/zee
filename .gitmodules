@@ -34,3 +34,6 @@
 [submodule "grammar/languages/tree-sitter-go"]
 	path = grammar/languages/tree-sitter-go
 	url = https://github.com/tree-sitter/tree-sitter-go
+[submodule "grammar/languages/tree-sitter-nim"]
+	path = grammar/languages/tree-sitter-nim
+	url = https://github.com/reo101/tree-sitter-nim
