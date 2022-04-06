@@ -1,18 +1,12 @@
-<p align="center">
-  <img alt="Zi logo" src="https://user-images.githubusercontent.com/797170/76172978-08909000-6193-11ea-9ed3-4c40d3a4c74b.png">
-</p>
-<p align="center">
-  <a href="https://github.com/mcobzarenco/zee/actions?query=workflow%3ABuild">
-    <img alt="Build Status" src="https://github.com/mcobzarenco/zi/workflows/Build/badge.svg">
-  </a>
-  <a href="https://crates.io/crates/zee">
-    <img alt="Crates.io" src="https://img.shields.io/crates/v/zee.svg">
-  </a>
-</p>
+# zee
+A modern editor for the terminal (written in Rust). It is highly experimental code.
 
-Zee is a modern editor for the terminal, written in Rust. It is highly experimental code.
+[![Build Status](https://travis-ci.com/mcobzarenco/zee.svg?branch=master)](https://travis-ci.com/mcobzarenco/zee)
+[![Crate](https://meritbadge.herokuapp.com/zee)](https://crates.io/crates/zee)
 
-In the old tradition of text editor demos, here's what it currently looks like editing its own source code
+![image](https://user-images.githubusercontent.com/797170/76172978-08909000-6193-11ea-9ed3-4c40d3a4c74b.png)
+
+Here's what it looks like at the moment
 
 ![Peek 2020-03-09 00-16](https://user-images.githubusercontent.com/797170/76173969-0bdc4980-619c-11ea-9f24-7899e2722910.gif)
 
@@ -26,7 +20,7 @@ $ cargo install zee
 ## features
 
  - The 100 FPS editor. Cursor movement and edits render under 10ms. Everything else happens asynchronously (syntax parsing and highlighting, IO to/from disk, file pickers).
- - Buffers are backed by a fast B-tree implementation of a [rope](https://en.wikipedia.org/wiki/Rope_(data_structure)) (via cessen's [ropey](https://github.com/cessen/ropey)).
+ - Buffers are backed by a fast B-tree implementation of a [rope](https://en.wikipedia.org/wiki/Rope) (via cessen's [ropey](https://github.com/cessen/ropey)).
  - Uses [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) for generating a parse tree from your code. This AST is used for syntax highlighting and on the fly validation. As it is an incremental parsing library, it scales to files with 1 million lines of code.
  - multi-buffer, multi-pane -- shared state *beats* tmux with multiple editors
  - fast recursive file search with fuzzy matching and aware of *ignore* files (using BurntSushi's ripgrep crates [walkdir](https://github.com/BurntSushi/walkdir), [ignore](https://github.com/BurntSushi/ripgrep))
@@ -89,20 +83,3 @@ The following keybindings are available:
  - `C-x o`, `C-x C-o` switch focus to the next buffer
  - `C-x C-c` quit
  - `C-t` cycle through the available themes
-
-## license
-
-This project is licensed under either of
-
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
-   http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or
-   http://opensource.org/licenses/MIT)
-
-at your option.
-
-#### contribution
-
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion by you, as defined in the Apache-2.0 license, shall be dual
-licensed as above, without any additional terms or conditions.

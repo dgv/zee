@@ -1,17 +1,16 @@
 [package]
 name = "zee-grammar"
-version = "0.2.0"
+version = "0.1.2"
 authors = ["Marius Cobzarenco <marius@reinfer.io>"]
 description = "Wrappers for tree sitter grammars used by zee"
 homepage = "https://github.com/mcobzarenco/zee/tree/master/grammar"
 license = "Apache-2.0"
-edition = "2021"
-rust-version = "1.59"
+edition = "2018"
 
 [dependencies]
-once_cell = "1.7.2"
-tree-sitter = "0.19.3"
+lazy_static = "1.4.0"
+tree-sitter = "0.6.3"
 
 [build-dependencies]
-cc = { version = "1.0.67", features = ["parallel"] }
-tree-sitter = "0.19.3"
+cc = "1.0.47"
+tree-sitter = "0.6.3"

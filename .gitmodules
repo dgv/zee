@@ -1,39 +1,36 @@
-[submodule "grammars/tree-sitter-rust"]
-	path = grammar/languages/tree-sitter-rust
-	url = https://github.com/tree-sitter/tree-sitter-rust.git
-[submodule "grammars/tree-sitter-javascript"]
-	path = grammar/languages/tree-sitter-javascript
-	url = https://github.com/tree-sitter/tree-sitter-javascript.git
-[submodule "grammars/tree-sitter-html"]
-	path = grammar/languages/tree-sitter-html
-	url = https://github.com/tree-sitter/tree-sitter-html.git
-[submodule "grammars/tree-sitter-c"]
-	path = grammar/languages/tree-sitter-c
-	url = https://github.com/tree-sitter/tree-sitter-c.git
-[submodule "grammars/tree-sitter-typescript"]
-	path = grammar/languages/tree-sitter-typescript
-	url = https://github.com/tree-sitter/tree-sitter-typescript.git
-[submodule "grammars/tree-sitter-cpp"]
-	path = grammar/languages/tree-sitter-cpp
-	url = https://github.com/tree-sitter/tree-sitter-cpp.git
-[submodule "grammars/tree-sitter-python"]
-	path = grammar/languages/tree-sitter-python
-	url = https://github.com/tree-sitter/tree-sitter-python.git
-[submodule "grammars/tree-sitter-bash"]
-	path = grammar/languages/tree-sitter-bash
-	url = https://github.com/tree-sitter/tree-sitter-bash.git
-[submodule "grammars/tree-sitter-json"]
-	path = grammar/languages/tree-sitter-json
-	url = https://github.com/tree-sitter/tree-sitter-json.git
-[submodule "grammars/tree-sitter-css"]
-	path = grammar/languages/tree-sitter-css
-	url = https://github.com/tree-sitter/tree-sitter-css.git
-[submodule "grammar/languages/tree-sitter-markdown"]
-	path = grammar/languages/tree-sitter-markdown
-	url = https://github.com/ikatyang/tree-sitter-markdown.git
 [submodule "grammar/languages/tree-sitter-go"]
 	path = grammar/languages/tree-sitter-go
 	url = https://github.com/tree-sitter/tree-sitter-go
-[submodule "grammar/languages/tree-sitter-nim"]
-	path = grammar/languages/tree-sitter-nim
-	url = https://github.com/reo101/tree-sitter-nim
+[submodule "grammar/languages/tree-sitter-c"]
+	path = grammar/languages/tree-sitter-c
+	url = https://github.com/tree-sitter/tree-sitter-c
+[submodule "grammar/languages/tree-sitter-html"]
+	path = grammar/languages/tree-sitter-html
+	url = https://github.com/tree-sitter/tree-sitter-html
+[submodule "grammar/languages/tree-sitter-rust"]
+	path = grammar/languages/tree-sitter-rust
+	url = https://github.com/tree-sitter/tree-sitter-rust
+[submodule "grammar/languages/tree-sitter-cpp"]
+	path = grammar/languages/tree-sitter-cpp
+	url = https://github.com/tree-sitter/tree-sitter-cpp
+[submodule "grammar/languages/tree-sitter-css"]
+	path = grammar/languages/tree-sitter-css
+	url = https://github.com/tree-sitter/tree-sitter-css
+[submodule "grammar/languages/tree-sitter-json"]
+	path = grammar/languages/tree-sitter-json
+	url = https://github.com/tree-sitter/tree-sitter-json
+[submodule "grammar/languages/tree-sitter-markdown"]
+	path = grammar/languages/tree-sitter-markdown
+	url = https://github.com/tree-sitter/tree-sitter-markdown
+[submodule "grammar/languages/tree-sitter-python"]
+	path = grammar/languages/tree-sitter-python
+	url = https://github.com/tree-sitter/tree-sitter-python
+[submodule "grammar/languages/tree-sitter-typescript"]
+	path = grammar/languages/tree-sitter-typescript
+	url = https://github.com/tree-sitter/tree-sitter-typescript
+[submodule "grammar/languages/tree-sitter-bash"]
+	path = grammar/languages/tree-sitter-bash
+	url = https://github.com/tree-sitter/tree-sitter-bash
+[submodule "grammar/languages/tree-sitter-javascript"]
+	path = grammar/languages/tree-sitter-javascript
+	url = https://github.com/tree-sitter/tree-sitter-javascript

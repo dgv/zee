@@ -82,7 +82,7 @@ pub(crate) fn map_node_kind_names(
                                 .unwrap_or(NTH_CHILD_ANY),
                         );
                     })
-                    .ok_or(Error::NodeKindNotFound(node_kind))
+                    .ok_or_else(|| Error::NodeKindNotFound(node_kind))
             },
         )
         .map(|_| Selector {
@@ -92,14 +92,17 @@ pub(crate) fn map_node_kind_names(
 }
 
 pub(crate) fn parse(input: &str) -> Result<Vec<SelectorRaw>> {
-    selectors(input)
+    Ok(selectors(input)
         .map(|(_, selectors)| {
             selectors
                 .into_iter()
                 .filter(|selector| !selector.node_selectors.is_empty())
                 .collect()
         })
-        .map_err(|_| Error::SelectorSyntax)
+        .unwrap())
+    // selectors(input)
+    //     .map(|(_, selectors)| selectors)
+    //     .map_err(|_| Error::SelectorSyntax)
 }
 
 fn selectors(input: &str) -> IResult<&str, Vec<SelectorRaw>> {
@@ -123,7 +126,7 @@ fn node_selector(input: &str) -> IResult<&str, NodeSelectorRaw> {
         NodeSelectorRaw {
             node_kind: identifier_str.into(),
             nth_child: nth
-                .map_or(Ok(None), |nth| nth.parse::<usize>().map(Some))
+                .map_or(Ok(None), |nth| usize::from_str_radix(nth, 10).map(Some))
                 .unwrap(),
         },
     ))
