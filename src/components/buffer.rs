@@ -1,5 +1,4 @@
 use euclid::default::SideOffsets2D;
-use git2::Repository;
 use maplit::hashmap;
 use once_cell::sync::Lazy;
 use ropey::{Rope, RopeSlice};
@@ -65,14 +64,14 @@ pub struct Buffer {
     cursor: Cursor,
     first_line: usize,
     syntax: Option<SyntaxTree>,
-    repo: Option<Repository>,
+    //repo: Option<Repository>,
     bindings: BufferBindings,
 }
 
 impl Buffer {
     pub fn from_file(file_path: PathBuf) -> Result<Self> {
         let mode = mode::find_by_filename(&file_path);
-        let repo = Repository::discover(&file_path).ok();
+        //let repo = Repository::discover(&file_path).ok();
         let text = if file_path.exists() {
             Rope::from_reader(BufReader::new(File::open(&file_path)?))?
         } else {
@@ -95,7 +94,7 @@ impl Buffer {
             first_line: 0,
             syntax: mode.language().map(|language| SyntaxTree::new(*language)),
             mode,
-            repo,
+            //repo,
             bindings: BufferBindings,
         })
     }
@@ -526,13 +525,14 @@ impl Buffer {
         );
 
         // Name of the current mode
-        let reference = self.repo.as_ref().map(|repo| repo.head().unwrap());
+        //let reference = self.repo.as_ref().map(|repo| repo.head().unwrap());
 
         // The current position the file right-aligned
         let current_line = self.text.char_to_line(self.cursor.range().start.0);
         let num_lines = self.text.len_lines();
         let line_status = format!(
             "{}{current_line:>4}:{current_byte:>2} {percent:>3}% ",
+            /*
             match reference
                 .as_ref()
                 .and_then(|reference| reference.shorthand())
@@ -540,6 +540,7 @@ impl Buffer {
                 Some(reference) => format!("{}  ", reference),
                 None => String::new(),
             },
+            */
             current_line = current_line,
             current_byte = visual_cursor_x,
             percent = if num_lines > 0 {
